@@ -1,0 +1,58 @@
+[mysqld]
+pid-file = /var/run/mysqld/mysql.pid
+
+; SSL certificates
+ssl-ca=/etc/mysql/ssl/ca-cert.pem
+ssl-cert=/etc/mysql/ssl/server-cert.pem
+ssl-key=/etc/mysql/ssl/server-key.pem
+
+; Enable explicit default values for TIMESTAMP columns to avoid deprecated implicit defaults.
+explicit_defaults_for_timestamp = 1
+
+; Enforce strict mode to prevent invalid or missing data values. Include modes to handle zero dates and division by zero
+; errors.
+
+sql_mode=STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO
+
+; Enforce secure connections by requiring the use of encrypted connections for all client connections.
+; This helps to prevent sensitive data from being transmitted in clear text over the network,
+; enhancing the security against eavesdropping and man-in-the-middle attacks.
+require_secure_transport = ON
+tls-version=TLSv1.2,TLSv1.3
+;tls-version=TLSv1.3
+
+; Security
+; prevent local user to upload data
+local_infile=0
+
+# Disable symbolic links to prevent security risks
+skip_symbolic_links=1
+
+; Prevent non-privileged users from listing all databases
+skip_show_database
+
+; Disable DNS resolution for faster connections and to prevent DNS spoofing
+skip_name_resolve=1
+
+; Limit total concurrent connections to prevent overload
+max_connections=200
+
+; Limit concurrent connections per user to ensure fair resource usage
+max_user_connections=50
+
+; Performance
+innodb_buffer_pool_size=1G
+innodb_log_file_size=256M
+query_cache_type=1
+query_cache_size=64M
+innodb_file_per_table=1
+innodb_file_format=Barracuda
+innodb_file_format_max=Barracuda
+innodb_compression_level=6
+
+; Logging
+slow_query_log=1
+slow_query_log_file=/var/log/mysql/slow.log
+long_query_time=2
+log_warnings=2
+log_error=/var/log/mysql/error.log

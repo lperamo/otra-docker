@@ -1,0 +1,48 @@
+[ ca ]
+default_ca = local_ca
+
+[ local_ca ]
+# Paths and files for the CA
+dir = ../localCertificates/nginx        # Root directory for the CA
+certificate = $dir/site-ca.crt           # CA certificate
+database = $dir/index.txt                # Database of signed certificates
+new_certs_dir = $dir/newcerts            # Directory for new signed certificates
+private_key = $dir/site-ca.key           # CA private key (needs to be generated if not existing)
+serial = $dir/serial                     # File for the serial number of certificates
+
+default_crl_days = 365
+default_days = 1825                      # Default validity period for signed certificates
+default_md = sha256                      # Hash algorithm
+
+policy = local_ca_policy
+x509_extensions = v3_ca                  # Extensions for issued certificates
+
+[ local_ca_policy ]
+commonName = supplied
+stateOrProvinceName = supplied
+countryName = supplied
+emailAddress = supplied
+organizationName = supplied
+organizationalUnitName = supplied
+
+[ v3_ca ]
+# Extensions for a typical CA
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical,CA:true
+keyUsage = critical,digitalSignature,cRLSign,keyCertSign
+
+[ req ]
+default_bits = 2048
+prompt = no
+distinguished_name = req_distinguished_name
+x509_extensions = v3_ca  # Extensions to add to a certificate request
+
+[ req_distinguished_name ]
+commonName = mySite
+stateOrProvinceName = MyState
+countryName = FR
+emailAddress = contact@enterprise.com
+localityName = MyLocality
+organizationName = myOrganization
+organizationalUnitName = IT

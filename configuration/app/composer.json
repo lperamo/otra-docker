@@ -1,0 +1,40 @@
+{
+  "name": "otra/skeleton-docker",
+  "type": "project",
+  "license": "X11",
+  "description": "A minimal OTRA project for Docker",
+  "require": {
+    "php": ">=8.4.0",
+    "otra/otra": ">=2025.0.0@dev",
+    "symfony/yaml": "6.1.*"
+  },
+  "config": {
+    "bin-dir": "bin",
+    "platform": {
+      "ext-brotli": "1.0",
+      "ext-curl": "1.0",
+      "ext-fileinfo": "1.0",
+      "ext-json": "1.0",
+      "ext-openssl": "1.0",
+      "ext-pdo": "1.0",
+      "ext-zend-opcache": "1.0",
+      "ext-zlib": "1.0"
+    },
+    "preferred-install": {
+      "otra/otra": "dist"
+    },
+    "sort-packages": true
+  },
+  "scripts": {
+    "otra-init": "@php vendor/otra/otra/src/console/composerInit.php",
+    "otra-update": "@composer update otra/otra --no-cache --no-autoloader",
+    "otra-update-dry": "@composer update otra/otra --no-cache --no-autoloader --dry-run",
+    "post-install-cmd": "@otra-init",
+    "post-update-cmd": "@otra-init"
+  },
+  "scripts-descriptions": {
+    "otra-init": "Checks the basic architecture of the OTRA project and fixes it if needed.",
+    "otra-update": "Updates OTRA without autoloader files and without using the cache.",
+    "otra-update-dry": "Checks for new version of OTRA without using the cache."
+  }
+}

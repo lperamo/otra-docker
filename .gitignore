@@ -1,1 +1,8 @@
 .idea
+app/
+data/
+localCertificates/nginx
+localCertificates/mariadb
+nginx/logs/*.log
+scripts/.srl
+docker-compose/.env

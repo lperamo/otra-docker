@@ -1,0 +1,72 @@
+FROM php:8.4-fpm-alpine3.21
+
+ARG BUILD_DATE
+ARG VCS_REF
+
+LABEL maintainer="Lionel Péramo <contact@lionel-peramo.com>" \
+  org.opencontainers.image.base.name="php:8.4-fpm-alpine3.21" \
+  org.opencontainers.image.created=$BUILD_DATE \
+  org.opencontainers.image.description="PHP-FPM image for OTRA, a PHP open-source framework. Includes Composer and essential PHP extensions." \
+  org.opencontainers.image.documentation="https://github.com/lperamo/otra-docker/wiki" \
+  org.opencontainers.image.licenses="X11" \
+  org.opencontainers.image.revision=$VCS_REF \
+  org.opencontainers.image.source="https://github.com/lperamo/otra-docker" \
+  org.opencontainers.image.title="OTRA PHP-FPM" \
+  org.opencontainers.image.url="https://hub.docker.com/r/lperamo/otra-php-fpm" \
+  org.opencontainers.image.vendor="SAS PéramoLionel" \
+  php-extensions="mbstring, opcache, intl, brotli, inotify" \
+  tools="Composer, Node.js, OpenJDK 17, GNU Parallel, TypeScript, Sass"
+
+# Combine all installations and cleanup in a single RUN
+# icu and icu-dev are needed for intl extension
+RUN apk add --no-cache --virtual .build-deps \
+        autoconf \
+        bash \
+        brotli-dev \
+        curl \
+        g++ \
+        gcc \
+        icu \
+        icu-dev \
+        libxml2-dev \
+        make \
+        musl-dev \
+        npm \
+        oniguruma-dev \
+        zlib-dev \
+    # Install nodejs separately so it's not removed with build-deps
+    && apk add --no-cache nodejs \
+    # Install OpenJDK JRE (Java Runtime Environment)
+    && apk add --no-cache openjdk17-jre \
+    # Install GNU Parallel
+    && apk add --no-cache parallel \
+    # Install PHP extensions
+    && docker-php-source extract \
+    && docker-php-ext-configure mbstring \
+    && docker-php-ext-install -j$(nproc) mbstring opcache intl \
+    && pecl install brotli inotify \
+    && docker-php-ext-enable brotli inotify \
+    && docker-php-source delete \
+    # Install Composer
+    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
+    # Setup www-data user
+    && echo "www-data:x:1000:" >> /etc/group \
+    && echo "www-data:x:1000:1000:www-data user:/home/www-data:/bin/sh" >> /etc/passwd \
+    && mkdir -p /home/www-data \
+    && chown www-data:www-data /home/www-data \
+    # Install TypeScript and Sass
+    && npm install -g typescript sass \
+    # Cleanup
+    && apk del npm .build-deps \
+    && rm -rf \
+        /root/.npm \
+        /root/.composer/cache \
+        /var/cache/apk/* \
+        /tmp/* \
+        /var/tmp/* \
+        /usr/share/doc \
+        /usr/share/man
+
+WORKDIR /var/www/html
+
+CMD ["php-fpm"]

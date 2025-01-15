@@ -1,0 +1,11 @@
+fastcgi_param APP_ENV dev;
+fastcgi_param APP_ROOT /var/www/html;
+fastcgi_param DOMAIN_NAME mysite.tech;
+fastcgi_param FASTCGI_HOST otra-app;
+fastcgi_param FASTCGI_PORT 9000;
+fastcgi_param TEST_LOGIN login;
+fastcgi_param TEST_PASSWORD password;
+fastcgi_param DATABASE_HOST "127.0.0.1";
+fastcgi_param DATABASE_NAME myDatabase;
+fastcgi_param DATABASE_LOGIN login;
+fastcgi_param DATABASE_PASSWORD password;

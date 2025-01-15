@@ -1,0 +1,102 @@
+networks:
+  otra_network:
+    name: otra_network
+    driver: bridge
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: ./Dockerfiles/Dockerfile.php-fpm-mariadb
+    container_name: otra-app-fpm
+    healthcheck:
+      test: [ "CMD", "composer", "-v"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    image: lperamo/otra-php-fpm-mariadb:2025.0.0
+    networks:
+      - otra_network
+    restart: no
+    volumes:
+      - ../app:/var/www/html
+      - ../configuration/app/composer.json:/tmp/composer.json
+      - ../configuration/app/DevAllConfig.php:/tmp/DevAllConfig.php
+      - ../configuration/app/ProdAllConfig.php:/tmp/ProdAllConfig.php
+      - ../scripts/init.sh:/usr/local/bin/init.sh
+      - ../scripts/change-permissions-dev.sh:/usr/local/bin/change-permissions-dev.sh
+    working_dir: /var/www/html
+    command: [ "sh", "-c", "/usr/local/bin/init.sh && /usr/local/bin/change-permissions-dev.sh && php-fpm -F" ]
+  
+  nginx:
+    container_name: otra-nginx
+    networks:
+      - otra_network
+    build:
+      context: ..
+      dockerfile: ./Dockerfiles/Dockerfile.nginx
+      args:
+        NGINX_IMAGE: "${NGINX_IMAGE}"
+    environment:
+      APP_ROOT: "${APP_ROOT}"
+      CERT_PATH: "${CERT_PATH}"
+      DOMAIN_NAME: "${DOMAIN_NAME}"
+      DOMAIN_NAME_DEV: "${DOMAIN_NAME_DEV}"
+      FASTCGI_HOST: "${FASTCGI_HOST}"
+      FASTCGI_PORT: "${FASTCGI_PORT}"
+    healthcheck:
+      test: [
+        "CMD",
+        "wget",
+        "--ca-certificate=/etc/nginx/myCerts/site-ca.crt",
+        "-q",
+        "-O",
+        "-",
+        "--header",
+        "Host: dev.mysite.tech",
+        "https://dev.mysite.tech:443/"
+      ]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    image: lperamo/otra-nginx:2025.0.0
+    ports:
+      - "8080:80"
+      - "8443:443"
+    restart: unless-stopped
+    volumes:
+      - ../app:/var/www/html
+      - ../nginx/certs:${CERT_PATH}:ro
+      - ../nginx/fastcgi_param.conf.dist:/etc/nginx/fastcgi_param.conf:ro
+      - ../nginx/logs:/var/log/nginx
+      - ../nginx/nginx.conf.template:/etc/nginx/nginx.conf.template
+      - ../nginx/snippets:/etc/nginx/snippets:ro
+      - ../nginx/start-nginx.sh:/usr/local/bin/start-nginx.sh:ro
+      - ../scripts/change-permissions-dev.sh:/usr/local/bin/change-permissions-dev.sh
+      - ../localCertificates/nginx:/etc/nginx/myCerts:ro
+    command: /bin/sh -c "/usr/local/bin/change-permissions-dev.sh &&/usr/local/bin/start-nginx.sh"
+    depends_on:
+      - app
+  
+  mariadb:
+    container_name: otra-db
+    image: yobasystems/alpine-mariadb
+    networks:
+      - otra_network
+    # to allow IDEs to view databases in development environment
+    ports:
+      - "${DATABASE_PORT}:3306" # expose only on localhost
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -uroot -p${MYSQL_ROOT_PASSWORD} --silent" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    volumes:
+      # SSL certificates for MariaDB on MariaDB side
+      - ../configuration/mysql/my-custom.cnf:/etc/mysql/conf.d/my-custom.cnf
+      - ../data:/var/lib/mysql
+      - ../localCertificates/MariaDB/ca-cert.pem:/etc/mysql/ssl/ca-cert.pem
+      - ../localCertificates/MariaDB/server-cert.pem:/etc/mysql/ssl/server-cert.pem
+      - ../localCertificates/MariaDB/server-key.pem:/etc/mysql/ssl/server-key.pem

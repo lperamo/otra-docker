@@ -1,0 +1,22 @@
+services:
+  app:
+    build:
+      args:
+        - BUILD_DATE=$(sh -c 'date -u +"%Y-%m-%dT%H:%M:%SZ"')
+        - VCS_REF=$(sh -c 'git rev-parse --short HEAD')
+      context: ..
+      dockerfile: ./Dockerfiles/Dockerfile.php-fpm
+    container_name: otra-app-fpm
+    healthcheck:
+      test: [ "CMD", "composer", "-v"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    image: lperamo/otra-php-fpm:2025.0.0
+    volumes:
+      - ../app:/var/www/html
+      - ../configuration/composer.json:/tmp/composer.json
+      - ../scripts/init.sh:/usr/local/bin/init.sh
+      - ../scripts/change-permissions-dev.sh:/usr/local/bin/change-permissions-dev.sh
+    working_dir: /var/www/html
+    command: ["sh", "-c", "/usr/local/bin/init.sh && /usr/local/bin/change-permissions-dev.sh"]

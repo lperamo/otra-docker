@@ -1,0 +1,53 @@
+# Use the specified Nginx image
+ARG NGINX_IMAGE=nginx:1.27.3-alpine3.20-slim
+FROM ${NGINX_IMAGE}
+
+# Install required dependencies
+RUN apk add --no-cache git gcc g++ make libc-dev pcre-dev zlib-dev openssl-dev wget cmake
+
+# Create www-data user and group
+RUN echo "www-data:x:1000:" >> /etc/group && \
+    echo "www-data:x:1000:1000:www-data user:/home/www-data:/bin/sh" >> /etc/passwd && \
+    mkdir -p /home/www-data && chown www-data:www-data /home/www-data
+
+# Clone the Brotli and Headers More modules
+RUN git clone --depth=1 https://github.com/google/ngx_brotli.git /usr/local/src/ngx_brotli \
+ && git clone --depth=1 https://github.com/openresty/headers-more-nginx-module.git /usr/local/src/ngx_headers_more
+
+# Initialize the Brotli submodule and build the Brotli libraries
+RUN cd /usr/local/src/ngx_brotli && git submodule update --init \
+ && cd deps/brotli \
+ && mkdir out && cd out \
+ && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF .. \
+ && make -j$(nproc) \
+ && make install
+
+# Download Nginx source corresponding to the installed version
+RUN NGINX_VERSION=$(nginx -v 2>&1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+') \
+ && wget http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz -O /usr/local/src/nginx.tar.gz \
+ && tar -xzf /usr/local/src/nginx.tar.gz -C /usr/local/src/ \
+ && mv /usr/local/src/nginx-${NGINX_VERSION} /usr/local/src/nginx
+
+# Compile Nginx with Brotli and Headers More modules
+RUN cd /usr/local/src/nginx \
+ && ./configure \
+    --with-compat \
+    --add-dynamic-module=/usr/local/src/ngx_brotli \
+    --add-dynamic-module=/usr/local/src/ngx_headers_more \
+ && make modules \
+ && cp objs/*.so /etc/nginx/modules
+
+# Set Nginx to run as www-data
+RUN sed -i 's/user  nginx;/user www-data;/' /etc/nginx/nginx.conf
+
+# Set the working directory for Nginx
+WORKDIR /etc/nginx
+
+# Ensure logs are accessible
+RUN mkdir -p /var/log/nginx
+
+# Expose HTTP and HTTPS ports
+EXPOSE 80 443
+
+# Default command to run Nginx
+CMD ["nginx", "-g", "daemon off;"]

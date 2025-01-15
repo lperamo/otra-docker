@@ -1,0 +1,59 @@
+# base.Dockerfile
+FROM php:8.4-cli-alpine3.21
+
+ARG BUILD_DATE
+ARG VCS_REF
+
+LABEL maintainer="Lionel Péramo <contact@lionel-peramo.com>" \
+  org.opencontainers.image.base.name="php:8.4-cli-alpine3.21" \
+  org.opencontainers.image.created=$BUILD_DATE \
+  org.opencontainers.image.description="PHP-CLI image for OTRA, a PHP open-source framework. Includes Composer and essential PHP extensions." \
+  org.opencontainers.image.documentation="https://github.com/lperamo/otra-docker/wiki" \
+  org.opencontainers.image.licenses="X11" \
+  org.opencontainers.image.revision=$VCS_REF \
+  org.opencontainers.image.source="https://github.com/lperamo/otra-docker" \
+  org.opencontainers.image.title="OTRA PHP-CLI" \
+  org.opencontainers.image.url="https://hub.docker.com/r/lperamo/otra-php-cli" \
+  org.opencontainers.image.vendor="SAS PéramoLionel" \
+  php-extensions="mbstring, opcache" \
+  tools="Composer"
+
+# Install system dependencies, build tools, Composer, etc.
+RUN apk add --no-cache --virtual .build-deps \
+  autoconf \
+  g++ \
+  gcc \
+  libxml2-dev \
+  make \
+  musl-dev \
+  oniguruma-dev \
+ && docker-php-source extract \
+ && docker-php-ext-configure mbstring \
+ && docker-php-ext-install -j$(nproc) mbstring opcache \
+ && docker-php-source delete \
+ && apk del .build-deps \
+ && curl -sS https://getcomposer.org/installer \
+   | php -- --install-dir=/usr/local/bin --filename=composer \
+ && rm -rf /root/.composer/cache /var/cache/apk/*
+
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Create the www-data group
+RUN echo "www-data:x:1000:" >> /etc/group
+
+# Create the www-data user and add it to the related group
+RUN echo "www-data:x:1000:1000:www-data user:/home/www-data:/bin/sh" >> /etc/passwd
+
+# Create the home folder for the www-data user
+RUN mkdir -p /home/www-data && chown www-data:www-data /home/www-data
+
+# Check that the user and the group have been created
+RUN grep www-data /etc/group && grep www-data /etc/passwd
+
+WORKDIR /var/www/html
+
+# Verify Composer installation
+RUN if [ ! -x /usr/local/bin/composer ]; then echo 'Composer not installed!' >&2 && exit 1; fi
+
+CMD ["php", "-a"]

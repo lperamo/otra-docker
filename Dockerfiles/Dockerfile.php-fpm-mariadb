@@ -1,0 +1,22 @@
+FROM lperamo/otra-php-fpm:2025.0.0
+
+LABEL maintainer="Lionel Péramo <contact@lionel-peramo.com>" \
+  org.opencontainers.image.base.name="php:8.4-fpm-alpine3.21" \
+  org.opencontainers.image.created=$BUILD_DATE \
+  org.opencontainers.image.description="Image for OTRA, a PHP open-source framework. Includes PHP-FPM, Composer and essential PHP extensions like MariaDB." \
+  org.opencontainers.image.documentation="https://github.com/lperamo/otra-docker/wiki" \
+  org.opencontainers.image.licenses="X11" \
+  org.opencontainers.image.revision=$VCS_REF \
+  org.opencontainers.image.source="https://github.com/lperamo/otra-docker" \
+  org.opencontainers.image.title="OTRA PHP-FPM" \
+  org.opencontainers.image.url="https://hub.docker.com/r/lperamo/otra-php-fpm-mariadb" \
+  org.opencontainers.image.vendor="SAS PéramoLionel" \
+  php-extensions="mbstring, opcache, intl, brotli, inotify, pdo, pdo_mysql" \
+  tools="Composer, Node.js, OpenJDK 17, GNU Parallel, TypeScript, Sass"
+
+# Install PDO and PDO MySQL extensions
+RUN docker-php-ext-install pdo pdo_mysql \
+    && docker-php-ext-enable pdo_mysql
+
+WORKDIR /var/www/html
+CMD ["php-fpm"]

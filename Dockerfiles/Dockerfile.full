@@ -1,0 +1,22 @@
+# full-stack.Dockerfile
+FROM lperamo/otra-php-fpm:2025.0.0
+
+# Install Nginx (simple approach) - or you might base on a bigger distribution
+RUN apk add --no-cache nginx
+
+# Install OTRA
+RUN composer create-project otra/skeleton --remove-vcs /var/www/html \
+ && chown -R www-data:www-data /var/www/html \
+ || echo 'Warning: OTRA installation failed'
+
+# Copy a default Nginx config for OTRA
+COPY default.conf /etc/nginx/conf.d/default.conf
+
+WORKDIR /var/www/html
+
+# Check if key files exist
+RUN if [ ! -f /etc/nginx/conf.d/default.conf ]\
+  then echo 'Missing default.conf for Nginx!' >&2 && exit 1
+
+# Start both PHP-FPM and Nginx in the same container (not always recommended, but "all-in-one" approach)
+CMD ["/bin/sh", "-c", "php-fpm -D && nginx -g 'daemon off;'"]

@@ -1,0 +1,21 @@
+services:
+  app:    
+    build:
+      args:
+        - BUILD_DATE=$(sh -c 'date -u +"%Y-%m-%dT%H:%M:%SZ"')
+        - VCS_REF=$(sh -c 'git rev-parse --short HEAD')
+      context: ..
+      dockerfile: ./Dockerfiles/Dockerfile.php-cli
+    container_name: otra-app-cli
+    healthcheck:
+      test: [ "CMD", "composer", "-v"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    image: lperamo/otra-php-cli:2025.0.0
+    volumes:
+      - ../app:/var/www/html
+      - ../configuration/composer.json:/tmp/composer.json
+      - ../scripts/init.sh:/usr/local/bin/init.sh
+    working_dir: /var/www/html
+    command: ["sh", "-c", "/usr/local/bin/init.sh"]
